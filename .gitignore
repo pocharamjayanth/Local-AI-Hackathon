@@ -1,0 +1,4 @@
+venv/
+*.gguf
+C:/Temp
+__pycache__/

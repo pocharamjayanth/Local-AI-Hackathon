@@ -1,0 +1,11 @@
+{
+  "tasks": [
+    {"task_name": "Front-end redesign", "assignee": "John", "deadline_or_timeline": "3 weeks"},
+    {"task_name": "Server migration", "assignee": "Sarah", "deadline_or_timeline": "next Tuesday"},
+    {"task_name": "API keys", "assignee": "Mark", "deadline_or_timeline": "tomorrow afternoon"}
+  ],
+  "budget_mentions": [
+    {"item": "Front-end redesign", "cost": "$5000"},
+    {"item": "Server migration", "cost": "delayed until next Tuesday"}
+  ]
+}
