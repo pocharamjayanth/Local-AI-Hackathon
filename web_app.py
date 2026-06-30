@@ -1,153 +1,163 @@
 import streamlit as st
-import json
-import time
 from llama_cpp import Llama
+import json
+import sqlite3
+import datetime
 
-# 1. Page Configuration & Professional Theme Styling
-st.set_page_config(
-    page_title="CoreText AI | Enterprise Data Structurer",
-    page_icon="⚡",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# --- DATABASE SETUP ---
+DB_FILE = "history.db"
 
-# Custom CSS for polished typography and cards
-st.markdown("""
-    <style>
-    .main-title {
-        font-size: 2.6rem;
-        font-weight: 700;
-        color: #1E3A8A;
-        margin-bottom: 0.2rem;
-    }
-    .sub-title {
-        font-size: 1.1rem;
-        color: #4B5563;
-        margin-bottom: 2rem;
-    }
-    .metric-card {
-        background-color: #F3F4F6;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 5px solid #2563EB;
-        margin-bottom: 1rem;
-    }
-    </style>
-""", unsafe_allow_html=True)
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS extractions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT,
+            input_text TEXT,
+            structured_output TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
-# 2. Optimized Model Loading (Cached)
+def save_extraction(input_text, output_json):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO extractions (timestamp, input_text, structured_output) VALUES (?, ?, ?)",
+        (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), input_text, json.dumps(output_json))
+    )
+    conn.commit()
+    conn.close()
+
+def get_history():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT timestamp, input_text, structured_output FROM extractions ORDER BY id DESC")
+    data = cursor.fetchall()
+    conn.close()
+    return data
+
+# Initialize SQLite Database
+init_db()
+
+# --- STREAMLIT UI CONFIGURATION ---
+st.set_page_config(page_title="CoreText AI", page_icon="⚡", layout="wide")
+
+st.title("⚡ CoreText AI — Offline Enterprise Data Structurer")
+st.caption("Running 100% locally on CPU via Qwen-2.5-1.5B-Instruct-GGUF")
+
+# --- LOCAL MODEL INITIALIZATION ---
 @st.cache_resource
 def load_model():
+    # Caches the model locally so it doesn't reload on every webpage interaction
     return Llama(
-        model_path="./qwen2.5-1.5b-instruct-q4_k_m.gguf",
-        n_ctx=2048,
-        n_threads=4
+        model_path="qwen2.5-1.5b-instruct-q4_k_m.gguf",
+        n_ctx=1024,  # Context window cap
+        n_threads=4  # Optimized for standard consumer CPUs
     )
 
-with st.spinner("Initializing local secure environment..."):
+try:
     llm = load_model()
+except Exception as e:
+    st.error(f"Failed to load local model weights: {e}")
+    st.stop()
 
-# 3. Sidebar Panel (System Control & Metadata)
-with st.sidebar:
-    st.image("https://img.icons8.com/fluent/96/000000/artificial-intelligence.png", width=80)
-    st.markdown("## System Configuration")
-    st.info("**Environment:** 100% Offline\n\n**Compute:** CPU-Optimized (Edge Mode)")
+# --- APP LAYOUT ---
+tabs = st.tabs(["🚀 Data Extraction Engine", "📊 Saved Database History"])
+
+with tabs[0]:
+    st.subheader("Unstructured Telemetry / Text Stream Input")
     
-    st.markdown("---")
-    st.markdown("### Target Extraction Schema")
-    st.caption("Enforcing structural integrity via localized JSON schemas.")
-    st.json({
-        "tasks": ["task_name", "assignee", "deadline_or_timeline"],
-        "budget_mentions": ["item", "cost"]
-    })
-
-# 4. Main Dashboard Header
-st.markdown('<div class="main-title">⚡ CoreText AI</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">Enterprise-grade offline extraction engine for unstructured telemetry and data streams.</div>', unsafe_allow_html=True)
-
-# 5. Split Workspace Layout
-col1, col2 = st.columns([1, 1], gap="large")
-
-with col1:
-    st.markdown("### 📥 Unstructured Data Input")
-    st.caption("Paste meeting transcripts, system logs, email dumps, or raw notes below.")
-    
-    user_input = st.text_area(
-        label="Raw Input Stream",
-        height=320,
-        placeholder="Example: John mentioned that the front-end redesign will cost $5000 and take 3 weeks...",
-        label_visibility="collapsed"
+    # Input field with safety info
+    raw_text = st.text_area(
+        "Paste raw meeting notes, logs, or schedules below:",
+        height=200,
+        placeholder="Example: John needs to purchase a test monitor configuration for $150 by this Friday..."
     )
     
-    st.markdown("<br>", unsafe_allow_html=True)
-    process_button = st.button("🚀 Execute Structural Extraction", type="primary", use_container_width=True)
-
-with col2:
-    st.markdown("### 📊 Actionable Structured Output")
-    st.caption("Validated JSON fields compiled locally via CPU token evaluation.")
+    # Validation constraint check to prevent tensor context crashes
+    MAX_CHAR_LIMIT = 1500
+    current_length = len(raw_text)
     
-    if process_button:
-        if not user_input.strip():
-            st.warning("⚠️ Input stream is empty. Please provide raw text data to analyze.")
-        else:
-            # High-performance status banner
-            status_container = st.empty()
-            status_container.info("🧠 Processing locally on CPU cores...")
-            
-            start_time = time.time()
-            
-            # Prompt Engineering Block
-            prompt = f"""<|im_start|>system
-You are a precise data extraction agent. Extract structured information matching this strict schema:
-{{
-  "tasks": [
-    {{"task_name": "string", "assignee": "string", "deadline_or_timeline": "string"}}
-  ],
-  "budget_mentions": [
-    {{"item": "string", "cost": "string"}}
-  ]
-}}
-Output raw valid JSON only. Do not wrap in markdown blocks. Do not add conversational text.
-<|im_end|>
-<|im_start|>user
-{user_input}
-<|im_end|>
-<|im_start|>assistant
-"""
-            # Inference execution
-            response = llm(prompt, max_tokens=500, temperature=0.1)
-            output_text = response['choices'][0]['text'].strip()
-            
-            processing_time = round(time.time() - start_time, 2)
-            status_container.empty() # Clear the processing message
-            
-            try:
-                # Performance Summary Card
-                st.markdown(f"""
-                    <div class="metric-card">
-                        <strong>Pipeline Metrics:</strong> Success | 
-                        <strong>Execution Time:</strong> {processing_time}s | 
-                        <strong>Compute Agent:</strong> Qwen-2.5-Local
-                    </div>
-                """, unsafe_allow_html=True)
-                
-                # Visualized JSON Output
-                json_data = json.loads(output_text)
-                st.json(json_data)
-                
-                # Professional Download Triggers
-                st.markdown("---")
-                st.download_button(
-                    label="💾 Export Structured Dataset (.json)",
-                    data=json.dumps(json_data, indent=2),
-                    file_name="structured_output.json",
-                    mime="application/json",
-                    use_container_width=True
-                )
-            except Exception as e:
-                st.error("🚨 Extraction parsing anomaly. System output did not strictly align with standard JSON schema.")
-                with st.expander("Review Raw LLM Stream Output"):
-                    st.code(output_text)
+    if current_length > MAX_CHAR_LIMIT:
+        st.warning(f"⚠️ Input is too long ({current_length}/{MAX_CHAR_LIMIT} chars). Truncating text to safe limits to prevent local CPU memory overflow.")
+        processed_input = raw_text[:MAX_CHAR_LIMIT]
     else:
-        # Placeholder view before clicking process
-        st.info("💡 Awaiting input stream. Paste unstructured text data in the left panel and execute.")
+        processed_input = raw_text
+
+    if st.button("Execute Structural Extraction", type="primary"):
+        if not processed_input.strip():
+            st.warning("Please provide an unstructured data stream first.")
+        else:
+            # Latency handling with structural feedback indicator
+            with st.spinner("Local AI processing active... Mapping content to target JSON layout (No cloud APIs used)."):
+                
+                system_prompt = (
+                    "You are a strict data parsing engine. Analyze the input text and extract tasks and budget items. "
+                    "Output a valid JSON object matching this schema precisely: "
+                    "{ 'tasks': [ { 'task_name': string, 'assignee': string, 'deadline_or_timeline': string } ], "
+                    "'budget': [ { 'item': string, 'cost': string } ] }. Do not include explanations, codeblocks, markdown, or text outside the raw JSON structure."
+                )
+                
+                # Format for Qwen-2.5-Instruct sequence handling
+                formatted_prompt = f"<|im_start|>system\n{system_prompt}<|im_end|>\n<|im_start|>user\n{processed_input}<|im_end|>\n<|im_start|>assistant\n"
+                
+                try:
+                    # Run CPU execution loop
+                    response = llm(
+                        formatted_prompt,
+                        max_tokens=512,
+                        temperature=0.1,  # Lower values maximize deterministic accuracy
+                        stop=["<|im_end|>", "<|im_start|>"]
+                    )
+                    
+                    raw_output = response["choices"][0]["text"].strip()
+                    
+                    # Clean potential formatting bugs gently
+                    if raw_output.startswith("```json"):
+                        raw_output = raw_output[7:]
+                    if raw_output.endswith("```"):
+                        raw_output = raw_output[:-3]
+                    
+                    parsed_json = json.loads(raw_output.strip())
+                    
+                    st.success("✅ Extraction Complete & Aligned to Target Schema!")
+                    
+                    # Display Side-by-Side Outputs
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.subheader("Visual Structural Map")
+                        st.write(parsed_json)
+                    with col2:
+                        st.subheader("Validated JSON Stream")
+                        st.code(json.dumps(parsed_json, indent=4), language="json")
+                    
+                    # PERSISTENCE ENGINE: Save locally to SQLite
+                    save_extraction(processed_input, parsed_json)
+                    st.info("💾 Record successfully synchronized to local database storage.")
+                    
+                except json.JSONDecodeError:
+                    st.error("⚠️ Graceful Failure Handling triggered: The model produced an invalid JSON formatting sequence. Please re-run or refine the text structure.")
+                    st.code(raw_output)
+                except Exception as e:
+                    st.error(f"Execution Error occurred: {e}")
+
+with tabs[1]:
+    st.subheader("🗄️ SQLite Local Telemetry Storage")
+    history_records = get_history()
+    
+    if not history_records:
+        st.info("No records found in local database storage.")
+    else:
+        # Build scannable history table layout
+        for timestamp, inp, out in history_records:
+            with st.expander(f"🕒 Record Timestamp: {timestamp}"):
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    st.markdown("**Original Processed Input:**")
+                    st.text(inp)
+                with c2:
+                    st.markdown("**Stored Structural Object:**")
+                    st.code(out, language="json")
