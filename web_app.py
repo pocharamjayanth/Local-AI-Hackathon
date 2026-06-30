@@ -62,8 +62,8 @@ with st.sidebar:
     })
 
 # 4. Main Dashboard Header
-st.markdown('<div class="main-title">⚡ CoreText AI</div>', unsafe_with_html=True)
-st.markdown('<div class="sub-title">Enterprise-grade offline extraction engine for unstructured telemetry and data streams.</div>', unsafe_with_html=True)
+st.markdown('<div class="main-title">⚡ CoreText AI</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">Enterprise-grade offline extraction engine for unstructured telemetry and data streams.</div>', unsafe_allow_html=True)
 
 # 5. Split Workspace Layout
 col1, col2 = st.columns([1, 1], gap="large")
@@ -79,7 +79,7 @@ with col1:
         label_visibility="collapsed"
     )
     
-    st.markdown("<br>", unsafe_with_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
     process_button = st.button("🚀 Execute Structural Extraction", type="primary", use_container_width=True)
 
 with col2:
