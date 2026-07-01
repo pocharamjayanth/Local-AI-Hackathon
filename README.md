@@ -1,5 +1,10 @@
 ⚡ Awesome CPU-First AI — CoreText Engine Edition
 
+    👥 Developed By: Team AINNOVATORS HUB
+    P.Jayanth
+    Gargeya
+    Krishna
+
 Training needs GPUs. Inference usually doesn't. Start with CPU; justify the GPU.  
 A curated architecture blueprint, technical data stack, and implementation evidence for running AI inference on CPU — the platform you already have everywhere.
 
