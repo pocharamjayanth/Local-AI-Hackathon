@@ -161,4 +161,4 @@ if db_rows:
             st.text(f"Raw Input Source Data:\n{row[2]}")
             st.code(row[3], language="json")
 else:
-    st.caption("Local database history cache empty. Successful
+    st.caption("Local database history cache empty. Successful pipeline transactions will register here.")
