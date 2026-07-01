@@ -1,6 +1,6 @@
 ⚡ Awesome CPU-First AI — CoreText Engine Edition
 
-    👥 Developed By: Team AINNOVATORS HUB
+    👥 Developed By: Team Local Host
     P.Jayanth
     Gargeya
     Krishna
