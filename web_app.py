@@ -3,6 +3,14 @@ from llama_cpp import Llama
 import json
 import sqlite3
 import datetime
+import os
+import subprocess
+
+# --- CLOUD INITIALIZATION ENGINE ---
+# Automatically downloads model weights if running on a fresh cloud instance
+if not os.path.exists("qwen2.5-1.5b-instruct-q4_k_m.gguf"):
+    with st.spinner("Initial boot: Downloading CPU-optimized model weights... Please wait."):
+        subprocess.run(["python", "download_model.py"])
 
 # --- DATABASE SETUP ---
 DB_FILE = "history.db"
